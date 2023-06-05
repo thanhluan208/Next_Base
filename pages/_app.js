@@ -11,6 +11,9 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
+import { Web3ReactProvider } from '@web3-react/core';
+import { Web3Provider } from '@ethersproject/providers';
+import WalletConnectorProvider from 'src/provider/WalletConnectProvider';
 const AuthenticationProvider = dynamic(() => import('src/provider/AuthenticationProvider'), { ssr: false });
 
 // Client-side cache, shared for the whole session of the user in the browser.
@@ -24,6 +27,30 @@ const queryClient = new QueryClient({
   }
 });
 
+// get connectors
+
+const connectors = {
+  injected: {
+    provider: undefined,
+    name: 'Injected',
+    connector: undefined
+  },
+  walletconnect: {
+    provider: undefined,
+    name: 'WalletConnect',
+    connector: undefined
+  },
+  walletlink: {
+    provider: undefined,
+    name: 'Coinbase Wallet',
+    connector: undefined
+  }
+};
+
+const getLibrary = provider => {
+  return new Web3Provider(provider);
+};
+
 export default function MyApp(props) {
   const { Component, emotionCache = clientSideEmotionCache, pageProps } = props;
   const mode = useHandleThemeStore.use.theme();
@@ -32,26 +59,30 @@ export default function MyApp(props) {
     <CacheProvider value={emotionCache}>
       <QueryClientProvider client={queryClient}>
         <AuthenticationProvider>
-          <Head>
-            <meta name='viewport' content='initial-scale=1, width=device-width' />
-          </Head>
-          <ThemeProvider theme={theme(mode)}>
-            {/* CssBaseline kickstart an elegant, consistent, and simple baseline to build upon. */}
-            <CssBaseline />
-            <Component {...pageProps} />
-            <ToastContainer
-              position='top-right'
-              autoClose={3000}
-              hideProgressBar={false}
-              newestOnTop={false}
-              closeOnClick
-              rtl={false}
-              pauseOnFocusLoss
-              draggable
-              pauseOnHover
-              theme={mode === 'dark' ? 'dark' : 'light'}
-            />
-          </ThemeProvider>
+          <Web3ReactProvider getLibrary={getLibrary}>
+            <WalletConnectorProvider>
+              <Head>
+                <meta name='viewport' content='initial-scale=1, width=device-width' />
+              </Head>
+              <ThemeProvider theme={theme(mode)}>
+                {/* CssBaseline kickstart an elegant, consistent, and simple baseline to build upon. */}
+                <CssBaseline />
+                <Component {...pageProps} />
+                <ToastContainer
+                  position='top-right'
+                  autoClose={3000}
+                  hideProgressBar={false}
+                  newestOnTop={false}
+                  closeOnClick
+                  rtl={false}
+                  pauseOnFocusLoss
+                  draggable
+                  pauseOnHover
+                  theme={mode === 'dark' ? 'dark' : 'light'}
+                />
+              </ThemeProvider>
+            </WalletConnectorProvider>
+          </Web3ReactProvider>
         </AuthenticationProvider>
       </QueryClientProvider>
     </CacheProvider>

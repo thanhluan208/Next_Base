@@ -4,11 +4,14 @@ import CommonIcons from 'src/components/commonIcons';
 import useToggleDialog from 'src/hooks/useToggleDialog';
 import useHandleThemeStore from 'src/store/useHandleThemeStore';
 import withAuth from 'src/HOCs/withAuth';
-import { useGetListComment } from 'src/hooks/home/useGetListComment';
 import withPermission from 'src/HOCs/withPermission';
-import { allowedRoles } from 'src/constant/keys';
+import { abiMethod, allowedRoles } from 'src/constant/keys';
 import { useAuthentication } from 'src/provider/AuthenticationProvider';
 import { toastInfo } from 'src/helpers/toastify';
+import withLayout from 'src/HOCs/withLayout';
+import { useWalletConnector } from 'src/provider/WalletConnectProvider';
+
+import { convertfromWei } from 'src/helpers';
 
 const propTypes = {};
 
@@ -19,7 +22,7 @@ const Home = props => {
   const toggleTheme = useHandleThemeStore.use.toggleTheme();
   const { open, toggle, shouldRender } = useToggleDialog();
 
-  const { data } = useGetListComment();
+  const { contractWorker, contract } = useWalletConnector();
 
   //! Function
   const renderTitle = (open, toggle) => {
@@ -33,6 +36,20 @@ const Home = props => {
     );
   };
 
+  const handleGetStakingInfos = async () => {
+    const info = await contractWorker(contract, abiMethod.GETSTAKINGINFO, 180);
+    const { amount, rewardRate, startTime } = info;
+    console.log('asdasd', convertfromWei(amount));
+  };
+
+  const handleStake180 = () => {
+    contractWorker(contract, abiMethod.CREATESTAKE, 10000000, 180, 10000);
+  };
+
+  const handleUnstake = () => {
+    contractWorker(contract, abiMethod.UNSTAKE, 180);
+  };
+
   //! Render
   return (
     <Fragment>
@@ -44,8 +61,14 @@ const Home = props => {
       <CommonStyles.Button onClick={toggleTheme}>{`To ${theme === 'light' ? 'dark' : 'light'}`}</CommonStyles.Button>
 
       <CommonStyles.Button onClick={logout}>Log out</CommonStyles.Button>
+
+      <CommonStyles.Button onClick={handleGetStakingInfos}>Get info staking</CommonStyles.Button>
+
+      <CommonStyles.Button onClick={handleStake180}>Staking 180s</CommonStyles.Button>
+
+      <CommonStyles.Button onClick={handleUnstake}>Unstake 180</CommonStyles.Button>
     </Fragment>
   );
 };
 
-export default withAuth(withPermission(Home, [allowedRoles.ADMIN]));
+export default withAuth(withPermission(withLayout(Home), [allowedRoles.ADMIN]));
