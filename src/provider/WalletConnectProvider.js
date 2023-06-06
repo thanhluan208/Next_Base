@@ -104,16 +104,6 @@ const WalletConnectorProvider = ({ children }) => {
     }
   }, [account]);
 
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      httpService.clearStorage('-walletlink:https://www.walletlink.org:Addresses');
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, []);
-
   //! Render
   const value = useMemo(() => {
     return { connectWallet, deactivateWallet, getBalance, contract, account, balance, contractWorker };
