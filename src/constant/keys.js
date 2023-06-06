@@ -1,3 +1,6 @@
+import WalletConnect from '@walletconnect/web3-provider';
+import CoinbaseWalletSDK from '@coinbase/wallet-sdk';
+
 export const queryKeys = {
   GET_LIST_COMMENT: 'GET_LIST_COMMENT'
 };
@@ -6,7 +9,8 @@ export const storageKeys = {
   USER_ROLE: 'USER_ROLE',
   USER_INFO: 'USER_INFO',
   TOKEN: 'TOKEN',
-  WALLET: 'WALLET'
+  WALLET: 'WALLET',
+  ACCOUNT: 'ACCOUNT'
 };
 
 export const allowedRoles = {
@@ -48,4 +52,20 @@ export const abiMethod = {
   TRANSFERFROM: 'transferFrom',
   TRANSFEROWNERSHIP: 'transferOwnership',
   UNSTAKE: 'unstake'
+};
+
+export const providerOptions = {
+  walletlink: {
+    package: CoinbaseWalletSDK, // Required
+    options: {
+      appName: 'Web 3 Modal Demo', // Required
+      infuraId: 'https://sepolia.infura.io/v3/fbc4aa55c71b42c9b3b04e07bf1ecdb9' // Required unless you provide a JSON RPC url; see `rpc` below
+    }
+  },
+  walletconnect: {
+    package: WalletConnect, // required
+    options: {
+      infuraId: 'https://sepolia.infura.io/v3/fbc4aa55c71b42c9b3b04e07bf1ecdb9' // required
+    }
+  }
 };

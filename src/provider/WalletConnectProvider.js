@@ -1,11 +1,11 @@
-import { useWeb3React } from '@web3-react/core';
-import { InjectedConnector } from '@web3-react/injected-connector';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ethers } from 'ethers';
 import { storageKeys, tokenContract } from 'src/constant/keys';
 import LuregasABI from 'src/abis/LuregasToken.json';
-import httpService from 'src/services/httpService';
 import { toastError } from 'src/helpers/toastify';
+import Web3Modal from 'web3modal';
+import { providerOptions } from 'src/constant/keys';
+import httpService from 'src/services/httpService';
 
 const WalletConnectorContext = React.createContext({
   connectWallet: () => {},
@@ -19,41 +19,44 @@ const WalletConnectorContext = React.createContext({
 
 export const useWalletConnector = () => React.useContext(WalletConnectorContext);
 
-const injectedConnector = new InjectedConnector({
-  supportedChainIds: [11155111]
-});
-
 const WalletConnectorProvider = ({ children }) => {
   //! State
   const [contract, setContract] = useState(null);
   const [balance, setBalance] = useState(0);
+  const [account, setAccount] = useState(httpService.getStorage(storageKeys.ACCOUNT) || null);
   const [stakingInfo, setStakingInfo] = useState([]);
-  const { activate, active, deactivate, account } = useWeb3React();
   const abi = LuregasABI.abi;
 
+  const web3Modal = new Web3Modal({
+    cacheProvider: true, // optional
+    providerOptions // required
+  });
+
   //! Function
-  const connectWallet = useCallback(async (wallet = 'metamask') => {
+  const connectWallet = async () => {
     try {
-      switch (wallet) {
-        case 'metamask':
-          await activate(injectedConnector);
-          break;
+      const provider = await web3Modal.connect();
+      const library = new ethers.providers.Web3Provider(provider);
+      const accounts = await library.listAccounts();
+      if (accounts) setAccount(accounts[0]);
 
-        default:
-          console.log('asdasd', wallet);
-          break;
-      }
+      const shouldDeleteStorage = provider.isCoinbaseWallet;
+      const checkStorage = localStorage.getItem('-walletlink:https://www.walletlink.org:Addresses');
 
-      httpService.saveStorage(storageKeys.WALLET, wallet);
+      if (shouldDeleteStorage && checkStorage)
+        httpService.removeStorage('-walletlink:https://www.walletlink.org:Addresses');
+
+      httpService.saveStorage(storageKeys.ACCOUNT, accounts[0]);
     } catch (error) {
-      console.log('err', error);
+      console.log('asdasd', error);
     }
-  }, []);
+  };
 
   const deactivateWallet = useCallback(() => {
     try {
-      deactivate();
-      httpService.removeStorage(storageKeys.WALLET);
+      web3Modal.clearCachedProvider();
+      setAccount();
+      httpService.removeStorage(storageKeys.ACCOUNT);
     } catch (error) {
       console.log('err', error);
     }
@@ -82,8 +85,7 @@ const WalletConnectorProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (active) {
-      console.log('asdasd', active);
+    if (account) {
       try {
         const { ethereum } = window;
         if (ethereum) {
@@ -100,13 +102,16 @@ const WalletConnectorProvider = ({ children }) => {
         console.log('asdasd', error);
       }
     }
-  }, [active]);
+  }, [account]);
 
   useEffect(() => {
-    const wallet = httpService.getStorage(storageKeys.WALLET);
-    if (wallet) {
-      connectWallet(wallet);
-    }
+    const handleBeforeUnload = () => {
+      httpService.clearStorage('-walletlink:https://www.walletlink.org:Addresses');
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
   //! Render

@@ -13,8 +13,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { Web3ReactProvider } from '@web3-react/core';
 import { Web3Provider } from '@ethersproject/providers';
-import WalletConnectorProvider from 'src/provider/WalletConnectProvider';
 const AuthenticationProvider = dynamic(() => import('src/provider/AuthenticationProvider'), { ssr: false });
+const WalletConnectorProvider = dynamic(() => import('src/provider/WalletConnectProvider'), { ssr: false });
 
 // Client-side cache, shared for the whole session of the user in the browser.
 const clientSideEmotionCache = createEmotionCache();

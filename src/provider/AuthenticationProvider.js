@@ -37,7 +37,7 @@ const AuthenticationProvider = ({ children }) => {
   }, []);
 
   const logout = useCallback(() => {
-    httpService.removeStorage([storageKeys.TOKEN, storageKeys.USER_ROLE]);
+    httpService.clearStorage();
     setIsLogged(false);
   }, []);
 
