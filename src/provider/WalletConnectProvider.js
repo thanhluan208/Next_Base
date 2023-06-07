@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ethers } from 'ethers';
-import { storageKeys, tokenContract } from 'src/constant/keys';
+import { abiEvent, abiMethod, storageKeys, tokenContract } from 'src/constant/keys';
 import LuregasABI from 'src/abis/LuregasToken.json';
 import { toastError } from 'src/helpers/toastify';
 import Web3Modal from 'web3modal';
@@ -14,7 +14,8 @@ const WalletConnectorContext = React.createContext({
   contractWorker: () => {},
   contract: null,
   account: null,
-  balance: 0
+  balance: 0,
+  loadingByEvent: false
 });
 
 export const useWalletConnector = () => React.useContext(WalletConnectorContext);
@@ -24,6 +25,7 @@ const WalletConnectorProvider = ({ children }) => {
   const [contract, setContract] = useState(null);
   const [balance, setBalance] = useState(0);
   const [account, setAccount] = useState(httpService.getStorage(storageKeys.ACCOUNT) || null);
+  const [loadingByEvent, setLoadingByEvent] = useState(false);
   const [stakingInfo, setStakingInfo] = useState([]);
   const abi = LuregasABI.abi;
 
@@ -64,14 +66,23 @@ const WalletConnectorProvider = ({ children }) => {
 
   const getBalance = useCallback(async (contract, account) => {
     try {
-      const balance = await contractWorker(contract, 'balanceOf', account);
+      const balance = await contractWorker(
+        {
+          contract,
+          method: abiMethod.BALANCEOF
+        },
+        account
+      );
       setBalance(ethers.utils.formatEther(balance));
+      console.log('balance', balance);
     } catch (error) {
       console.log('asdasd', error);
     }
   }, []);
 
-  const contractWorker = useCallback(async (contract, method, ...methodArgs) => {
+  const contractWorker = useCallback(async (core, ...methodArgs) => {
+    const { contract, method, shouldLoadingEvent } = core;
+    if (shouldLoadingEvent) setLoadingByEvent(true);
     if (!contract) {
       toastError('Please connect wallet');
       return;
@@ -81,6 +92,7 @@ const WalletConnectorProvider = ({ children }) => {
       return methodResponse;
     } catch (error) {
       console.log('error', error);
+      toastError(error.message);
     }
   }, []);
 
@@ -93,9 +105,18 @@ const WalletConnectorProvider = ({ children }) => {
           const signer = provider.getSigner();
           const luregas = new ethers.Contract(tokenContract, abi, signer);
           getBalance(luregas, account);
-          luregas.on('staked', (user, amount, timestamp, rewardRate) => {
+          luregas.on(abiEvent.STAKED, async (user, amount, timestamp, rewardRate) => {
             console.log('staked', user, amount, timestamp, rewardRate);
+            await getBalance(luregas, account);
+            setLoadingByEvent(false);
           });
+
+          luregas.on(abiEvent.UNSTAKED, async (user, amount, timestamp, rewardRate) => {
+            console.log('unstaked', user, amount, timestamp, rewardRate);
+            await getBalance(luregas, account);
+            setLoadingByEvent(false);
+          });
+
           setContract(luregas);
         }
       } catch (error) {
@@ -106,8 +127,17 @@ const WalletConnectorProvider = ({ children }) => {
 
   //! Render
   const value = useMemo(() => {
-    return { connectWallet, deactivateWallet, getBalance, contract, account, balance, contractWorker };
-  }, [connectWallet, deactivateWallet, getBalance, contract, account, balance, contractWorker]);
+    return {
+      connectWallet,
+      deactivateWallet,
+      getBalance,
+      contract,
+      account,
+      balance,
+      contractWorker,
+      loadingByEvent
+    };
+  }, [connectWallet, deactivateWallet, getBalance, contract, account, balance, contractWorker, loadingByEvent]);
 
   return <WalletConnectorContext.Provider value={value}>{children}</WalletConnectorContext.Provider>;
 };

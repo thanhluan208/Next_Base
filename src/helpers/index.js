@@ -1,14 +1,19 @@
 import LuregasABI from 'src/abis/LuregasToken.json';
 import { ethers } from 'ethers';
 
-export const getABIMethods = () => {
+export const getABIMethodsOrEvent = isGetMethod => {
   const abiMethods = LuregasABI.abi
-    .map(elm => elm.name)
+    .map(elm => {
+      return {
+        name: elm.name,
+        type: elm.type
+      };
+    })
     .reduce((acc, cur) => {
-      if (!cur) return acc;
+      if (!cur || (isGetMethod && cur.type !== 'function') || (!isGetMethod && cur.type !== 'event')) return acc;
       return {
         ...acc,
-        [cur.toUpperCase()]: cur
+        [cur.name.toUpperCase()]: cur.name
       };
     }, {});
 
