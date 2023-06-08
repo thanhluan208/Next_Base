@@ -1,33 +1,28 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { ethers } from 'ethers';
-import { abiEvent, abiMethod, storageKeys, tokenContract } from 'src/constant/keys';
-import LuregasABI from 'src/abis/LuregasToken.json';
-import { toastError } from 'src/helpers/toastify';
+import { storageKeys } from 'src/constant/keys';
 import Web3Modal from 'web3modal';
 import { providerOptions } from 'src/constant/keys';
 import httpService from 'src/services/httpService';
+import userHandleUserInfoStore from 'src/store/userHandleUserInfoStore';
+import contractServices from 'src/services/contractServices';
+import { convertfromWei } from 'src/helpers';
 
-const WalletConnectorContext = React.createContext({
+const WalletConnectContext = React.createContext({
   connectWallet: () => {},
   deactivateWallet: () => {},
-  getBalance: () => {},
   contractWorker: () => {},
-  contract: null,
   account: null,
-  balance: 0,
   loadingByEvent: false
 });
 
-export const useWalletConnector = () => React.useContext(WalletConnectorContext);
+export const useWalletConnect = () => React.useContext(WalletConnectContext);
 
-const WalletConnectorProvider = ({ children }) => {
+const WalletConnectProvider = ({ children }) => {
   //! State
-  const [contract, setContract] = useState(null);
-  const [balance, setBalance] = useState(0);
-  const [account, setAccount] = useState(httpService.getStorage(storageKeys.ACCOUNT) || null);
-  const [loadingByEvent, setLoadingByEvent] = useState(false);
-  const [stakingInfo, setStakingInfo] = useState([]);
-  const abi = LuregasABI.abi;
+
+  const saveUserInfo = userHandleUserInfoStore.use.saveUserInfo();
+  const clearUserInfo = userHandleUserInfoStore.use.clearUserInfo();
 
   const web3Modal = new Web3Modal({
     cacheProvider: true, // optional
@@ -35,12 +30,18 @@ const WalletConnectorProvider = ({ children }) => {
   });
 
   //! Function
+
+  const getBalance = async account => {
+    const ContractServices = new contractServices(window.ethereum);
+    const balance = await ContractServices.getBalance(account);
+    saveUserInfo(storageKeys.BALANCE, convertfromWei(balance));
+  };
+
   const connectWallet = async () => {
     try {
       const provider = await web3Modal.connect();
       const library = new ethers.providers.Web3Provider(provider);
       const accounts = await library.listAccounts();
-      if (accounts) setAccount(accounts[0]);
 
       const shouldDeleteStorage = provider.isCoinbaseWallet;
       const checkStorage = localStorage.getItem('-walletlink:https://www.walletlink.org:Addresses');
@@ -48,7 +49,12 @@ const WalletConnectorProvider = ({ children }) => {
       if (shouldDeleteStorage && checkStorage)
         httpService.removeStorage('-walletlink:https://www.walletlink.org:Addresses');
 
-      httpService.saveStorage(storageKeys.ACCOUNT, accounts[0]);
+      if (accounts) {
+        httpService.saveStorage(storageKeys.ACCOUNT, accounts[0]);
+        saveUserInfo(storageKeys.ACCOUNT, accounts[0]);
+
+        await getBalance(accounts[0]);
+      }
     } catch (error) {
       console.log('asdasd', error);
     }
@@ -57,89 +63,30 @@ const WalletConnectorProvider = ({ children }) => {
   const deactivateWallet = useCallback(() => {
     try {
       web3Modal.clearCachedProvider();
-      setAccount();
       httpService.removeStorage(storageKeys.ACCOUNT);
+      clearUserInfo();
     } catch (error) {
       console.log('err', error);
     }
   }, []);
 
-  const getBalance = useCallback(async (contract, account) => {
-    try {
-      const balance = await contractWorker(
-        {
-          contract,
-          method: abiMethod.BALANCEOF
-        },
-        account
-      );
-      setBalance(ethers.utils.formatEther(balance));
-      console.log('balance', balance);
-    } catch (error) {
-      console.log('asdasd', error);
-    }
-  }, []);
-
-  const contractWorker = useCallback(async (core, ...methodArgs) => {
-    const { contract, method, shouldLoadingEvent } = core;
-    if (shouldLoadingEvent) setLoadingByEvent(true);
-    if (!contract) {
-      toastError('Please connect wallet');
-      return;
-    }
-    try {
-      const methodResponse = await contract[method](...methodArgs);
-      return methodResponse;
-    } catch (error) {
-      console.log('error', error);
-      toastError(error.message);
-    }
-  }, []);
-
   useEffect(() => {
+    const account = httpService.getStorage(storageKeys.ACCOUNT);
     if (account) {
-      try {
-        const { ethereum } = window;
-        if (ethereum) {
-          const provider = new ethers.providers.Web3Provider(ethereum);
-          const signer = provider.getSigner();
-          const luregas = new ethers.Contract(tokenContract, abi, signer);
-          getBalance(luregas, account);
-          luregas.on(abiEvent.STAKED, async (user, amount, timestamp, rewardRate) => {
-            console.log('staked', user, amount, timestamp, rewardRate);
-            await getBalance(luregas, account);
-            setLoadingByEvent(false);
-          });
-
-          luregas.on(abiEvent.UNSTAKED, async (user, amount, timestamp, rewardRate) => {
-            console.log('unstaked', user, amount, timestamp, rewardRate);
-            await getBalance(luregas, account);
-            setLoadingByEvent(false);
-          });
-
-          setContract(luregas);
-        }
-      } catch (error) {
-        console.log('asdasd', error);
-      }
+      saveUserInfo(storageKeys.ACCOUNT, account);
+      getBalance(account);
     }
-  }, [account]);
+  }, []);
 
   //! Render
   const value = useMemo(() => {
     return {
       connectWallet,
-      deactivateWallet,
-      getBalance,
-      contract,
-      account,
-      balance,
-      contractWorker,
-      loadingByEvent
+      deactivateWallet
     };
-  }, [connectWallet, deactivateWallet, getBalance, contract, account, balance, contractWorker, loadingByEvent]);
+  }, [connectWallet, deactivateWallet]);
 
-  return <WalletConnectorContext.Provider value={value}>{children}</WalletConnectorContext.Provider>;
+  return <WalletConnectContext.Provider value={value}>{children}</WalletConnectContext.Provider>;
 };
 
-export default WalletConnectorProvider;
+export default WalletConnectProvider;

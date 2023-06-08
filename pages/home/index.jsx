@@ -5,13 +5,14 @@ import useToggleDialog from 'src/hooks/useToggleDialog';
 import useHandleThemeStore from 'src/store/useHandleThemeStore';
 import withAuth from 'src/HOCs/withAuth';
 import withPermission from 'src/HOCs/withPermission';
-import { abiMethod, allowedRoles } from 'src/constant/keys';
+import { abiEvent, abiMethod, allowedRoles, storageKeys } from 'src/constant/keys';
 import { useAuthentication } from 'src/provider/AuthenticationProvider';
 import { toastInfo } from 'src/helpers/toastify';
 import withLayout from 'src/HOCs/withLayout';
-import { useWalletConnector } from 'src/provider/WalletConnectProvider';
 
-import { convertfromWei } from 'src/helpers';
+import { convertToWei, convertfromWei } from 'src/helpers';
+import contractServices from 'src/services/contractServices';
+import userHandleUserInfoStore from 'src/store/userHandleUserInfoStore';
 
 const propTypes = {};
 
@@ -21,8 +22,12 @@ const Home = props => {
   const theme = useHandleThemeStore.use.theme();
   const toggleTheme = useHandleThemeStore.use.toggleTheme();
   const { open, toggle, shouldRender } = useToggleDialog();
+  const ContractSerivce = new contractServices(window.ethereum);
 
-  const { contractWorker, contract } = useWalletConnector();
+  const saveUserInfo = userHandleUserInfoStore.use.saveUserInfo();
+  const userInfo = userHandleUserInfoStore.use.userInfo();
+
+  const account = userInfo[storageKeys.ACCOUNT];
 
   //! Function
   const renderTitle = (open, toggle) => {
@@ -36,18 +41,55 @@ const Home = props => {
     );
   };
 
-  const handleGetStakingInfos = async () => {
-    const info = await contractWorker(contract, abiMethod.GETSTAKINGINFO, 180);
-    const { amount, rewardRate, startTime } = info;
-    console.log('asdasd', convertfromWei(amount));
+  const handleGetStakingInfos = () => {
+    ContractSerivce.contractWorker(
+      {
+        method: abiMethod.GETSTAKINGINFO,
+        onSuccess: response => {
+          console.log('response', response);
+        },
+        onFailed: err => {
+          console.log('err', err);
+        }
+      },
+      180
+    );
   };
 
-  const handleStake180 = () => {
-    contractWorker(contract, abiMethod.CREATESTAKE, 10000000, 180, 10000);
+  const onEventSuccess = async (user, amount, timestamp, rewardRate) => {
+    console.log('reponse', { user, amount, timestamp, rewardRate, account });
+
+    if (account) {
+      const balance = await ContractSerivce.getBalance(account);
+      saveUserInfo([storageKeys.BALANCE], convertfromWei(balance));
+    }
   };
 
-  const handleUnstake = () => {
-    contractWorker(contract, abiMethod.UNSTAKE, 180);
+  const onEventFailed = err => {
+    console.log('err', err);
+  };
+
+  const handleStake180 = async () => {
+    await ContractSerivce.contractWorker(
+      {
+        method: abiMethod.CREATESTAKE
+      },
+      convertToWei('5.599999999999999999'),
+      180,
+      1000
+    );
+    await ContractSerivce.contractListener(abiEvent.STAKED, onEventSuccess, onEventFailed);
+  };
+
+  const handleUnstake = async () => {
+    await ContractSerivce.contractWorker(
+      {
+        method: abiMethod.UNSTAKE
+      },
+      180
+    );
+
+    await ContractSerivce.contractListener(abiEvent.UNSTAKED, onEventSuccess, onEventFailed);
   };
 
   //! Render

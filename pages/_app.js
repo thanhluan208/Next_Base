@@ -29,24 +29,6 @@ const queryClient = new QueryClient({
 
 // get connectors
 
-const connectors = {
-  injected: {
-    provider: undefined,
-    name: 'Injected',
-    connector: undefined
-  },
-  walletconnect: {
-    provider: undefined,
-    name: 'WalletConnect',
-    connector: undefined
-  },
-  walletlink: {
-    provider: undefined,
-    name: 'Coinbase Wallet',
-    connector: undefined
-  }
-};
-
 const getLibrary = provider => {
   return new Web3Provider(provider);
 };

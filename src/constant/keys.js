@@ -10,25 +10,19 @@ export const storageKeys = {
   USER_INFO: 'USER_INFO',
   TOKEN: 'TOKEN',
   WALLET: 'WALLET',
-  ACCOUNT: 'ACCOUNT'
+  ACCOUNT: 'ACCOUNT',
+  BALANCE: 'BALANCE'
 };
 
 export const allowedRoles = {
   ADMIN: 'ADMIN'
 };
 
-export const tokenContract = '0x3551D8d0069D3cb6A1E019d38e45C76645E2F5ee';
+export const tokenContract = '0xcb6fFC2A07d5fd2B352afC7692dBCBA72437A1c0';
 
 export const abiMethod = {
-  APPROVAL: 'Approval',
-  EVENTMINTERADDED: 'EventMinterAdded',
-  EVENTMINTERREMOVED: 'EventMinterRemoved',
-  OWNERSHIPTRANSFERRED: 'OwnershipTransferred',
-  TRANSFER: 'transfer',
-  CLAIMED: 'claimed',
-  STAKED: 'staked',
-  UNSTAKED: 'unstaked',
-  ADDMINTER: 'addMinter',
+  DEFAULT_ADMIN_ROLE: 'DEFAULT_ADMIN_ROLE',
+  MINTER_ROLE: 'MINTER_ROLE',
   ALLOWANCE: 'allowance',
   APPROVE: 'approve',
   BALANCEOF: 'balanceOf',
@@ -38,20 +32,33 @@ export const abiMethod = {
   CREATESTAKE: 'createStake',
   DECIMALS: 'decimals',
   DECREASEALLOWANCE: 'decreaseAllowance',
+  GETROLEADMIN: 'getRoleAdmin',
   GETSTAKINGINFO: 'getStakingInfo',
+  GRANTROLE: 'grantRole',
+  HASROLE: 'hasRole',
   INCREASEALLOWANCE: 'increaseAllowance',
-  ISMINTER: 'isMinter',
   ISSTAKING: 'isStaking',
   MINTBYMINTER: 'mintByMinter',
   NAME: 'name',
-  OWNER: 'owner',
-  REMOVEMINTER: 'removeMinter',
-  RENOUNCEOWNERSHIP: 'renounceOwnership',
+  RENOUNCEROLE: 'renounceRole',
+  REVOKEROLE: 'revokeRole',
+  SUPPORTSINTERFACE: 'supportsInterface',
   SYMBOL: 'symbol',
   TOTALSUPPLY: 'totalSupply',
+  TRANSFER: 'transfer',
   TRANSFERFROM: 'transferFrom',
-  TRANSFEROWNERSHIP: 'transferOwnership',
   UNSTAKE: 'unstake'
+};
+
+export const abiEvent = {
+  APPROVAL: 'Approval',
+  ROLEADMINCHANGED: 'RoleAdminChanged',
+  ROLEGRANTED: 'RoleGranted',
+  ROLEREVOKED: 'RoleRevoked',
+  TRANSFER: 'Transfer',
+  CLAIMED: 'claimed',
+  STAKED: 'staked',
+  UNSTAKED: 'unstaked'
 };
 
 export const providerOptions = {
